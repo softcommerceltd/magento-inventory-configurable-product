@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © Soft Commerce Ltd. All rights reserved.
+ * See LICENSE.txt for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <!-- apply a fix for https://github.com/magento/inventory/issues/3350 -->
+    <type name="Magento\Inventory\Model\SourceItem\Command\DecrementSourceItemQty">
+        <plugin name="update_parent_configurable_product_stock_status_in_legacy_stock" disabled="true"/>
+        <plugin name="update_parent_configurable_product_stock_status_in_legacy_stock_fix" type="SoftCommerce\InventoryConfigurableProduct\Plugin\InventoryApi\UpdateParentStockStatusInLegacyStockPlugin"/>
+    </type>
+</config>
