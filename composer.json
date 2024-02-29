@@ -2,7 +2,7 @@
     "name": "softcommerce/module-inventory-configurable-product",
     "description": "N/A",
     "require": {
-        "php": "~7.4.0||~8.0.0||~8.1.0||~8.2.0",
+        "php": "~8.0.0||~8.1.0||~8.2||~8.3",
         "magento/module-inventory-configurable-product": "^1.2"
     },
     "type": "magento2-module",
