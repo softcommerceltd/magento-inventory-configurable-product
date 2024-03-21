@@ -24,17 +24,17 @@ class UpdateParentStockStatusInLegacyStockPlugin
     /**
      * @var DefaultSourceProviderInterface
      */
-    private $defaultSourceProvider;
+    private DefaultSourceProviderInterface $defaultSourceProvider;
 
     /**
      * @var ChangeParentStockStatus
      */
-    private $changeParentStockStatus;
+    private ChangeParentStockStatus $changeParentStockStatus;
 
     /**
      * @var GetProductIdsBySkusInterface
      */
-    private $getProductIdsBySkus;
+    private GetProductIdsBySkusInterface $getProductIdsBySkus;
 
     /**
      * @param DefaultSourceProviderInterface $defaultSourceProvider

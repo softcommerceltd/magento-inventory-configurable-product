@@ -15,8 +15,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "1.0.1 [CE|EE|ECE 2.4.0-2.4.7] 21 Mar 2024"
+          name: "1.0.2 [CE|EE|ECE 2.4.0-2.4.7] 21 Mar 2024"
           tag_name: 1.0.1
-          body: "- **Compatibility**: Introduced support for PHP 8.3 [#8]"
+          body: "- **Compatibility**: Introduce compatibility with PHP type declaration [#2]"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

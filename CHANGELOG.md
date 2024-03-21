@@ -1,5 +1,8 @@
 ## Changelog
 
+### Version 1.0.2
+- **Compatibility**: Introduce compatibility with PHP type declaration [#2]
+
 ### Version 1.0.1
 - **Compatibility**: PHP 8.2 | 8.3 compatibility
 
