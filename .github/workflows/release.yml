@@ -1,19 +1,159 @@
-name: Automated Release
+name: Release
+
 on:
   push:
-    branches:
-      - "master"
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
 jobs:
-  build:
+  release:
+    name: Release Package
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Release
-        uses: softprops/action-gh-release@v2
         with:
-          name: "1.0.2 [CE|EE|ECE 2.4.0-2.4.7] 21 Mar 2024"
-          tag_name: 1.0.1
-          body: "- **Compatibility**: Introduce compatibility with PHP type declaration [#2]"
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG_NAME=${GITHUB_REF#refs/tags/}
+            VERSION=${TAG_NAME#v}
+            echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+            echo "version=${VERSION}" >> $GITHUB_OUTPUT
+            echo "Creating release for tag: ${TAG_NAME}"
+          else
+            echo "Not a tag push, exiting"
+            exit 1
+          fi
+
+      - name: Verify version matches composer.json
+        run: |
+          COMPOSER_VERSION=$(jq -r '.version // "0.0.0"' composer.json)
+          TAG_VERSION="${{ steps.version.outputs.version }}"
+          
+          if [ "$COMPOSER_VERSION" != "$TAG_VERSION" ]; then
+            echo "WARNING: composer.json version ($COMPOSER_VERSION) doesn't match tag version ($TAG_VERSION)"
+          fi
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          
+          # Get the previous tag
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 ${TAG_NAME}^ 2>/dev/null || echo "")
+          
+          # Generate changelog entries
+          if [ -z "$PREVIOUS_TAG" ]; then
+            echo "No previous tag found, including last 10 commits"
+            COMMITS=$(git log ${TAG_NAME} --pretty=format:"%s" -10)
+          else
+            echo "Previous tag: ${PREVIOUS_TAG}"
+            COMMITS=$(git log ${PREVIOUS_TAG}..${TAG_NAME} --pretty=format:"%s")
+          fi
+          
+          # Categorize commits
+          FEATURES=""
+          FIXES=""
+          BREAKING=""
+          OTHER=""
+          
+          while IFS= read -r commit; do
+            if [[ "$commit" =~ ^feat(\(.*\))?!?:[[:space:]](.*)$ ]] || [[ "$commit" =~ BREAKING[[:space:]]CHANGE ]]; then
+              if [[ "$commit" =~ ! ]] || [[ "$commit" =~ BREAKING[[:space:]]CHANGE ]]; then
+                BREAKING="${BREAKING}- **Breaking**: ${BASH_REMATCH[2]:-$commit}\n"
+              else
+                FEATURES="${FEATURES}- **Feature**: ${BASH_REMATCH[2]:-$commit}\n"
+              fi
+            elif [[ "$commit" =~ ^fix(\(.*\))?:[[:space:]](.*)$ ]]; then
+              FIXES="${FIXES}- **Fix**: ${BASH_REMATCH[2]}\n"
+            elif [[ "$commit" =~ ^(chore|docs|style|refactor|perf|test)(\(.*\))?:[[:space:]](.*)$ ]]; then
+              # Skip these for changelog
+              continue
+            else
+              OTHER="${OTHER}- ${commit}\n"
+            fi
+          done <<< "$COMMITS"
+          
+          # Skip CHANGELOG update - already done by local release process
+          echo "CHANGELOG.md already updated by release script"
+          
+          # Try to extract from CHANGELOG.md first
+          if [ -f "CHANGELOG.md" ]; then
+            # Extract the latest version section from CHANGELOG.md
+            awk -v version="$VERSION" '
+              /^## \[/ { if (found) exit; if ($2 == "["version"]") found=1; next }
+              found && /^## \[/ { exit }
+              found { print }
+            ' CHANGELOG.md > release_notes.md
+            
+            # If we got content from CHANGELOG, just add the full changelog link
+            if [ -s release_notes.md ]; then
+              echo "" >> release_notes.md
+              echo "---" >> release_notes.md
+              echo "" >> release_notes.md
+              if [ -n "$PREVIOUS_TAG" ]; then
+                echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${TAG_NAME}" >> release_notes.md
+              else
+                echo "**Full Changelog**: https://github.com/${{ github.repository }}/commits/${TAG_NAME}" >> release_notes.md
+              fi
+            else
+              # Fallback to commit-based notes
+              echo "## Changes" > release_notes.md
+              echo "" >> release_notes.md
+              [ -n "$BREAKING" ] && echo -e "### ⚠️ Breaking Changes\n$BREAKING" >> release_notes.md
+              [ -n "$FEATURES" ] && echo -e "### ✨ Features\n$FEATURES" >> release_notes.md
+              [ -n "$FIXES" ] && echo -e "### 🐛 Bug Fixes\n$FIXES" >> release_notes.md
+              [ -n "$OTHER" ] && echo -e "### 📝 Other Changes\n$OTHER" >> release_notes.md
+              echo "" >> release_notes.md
+              echo "---" >> release_notes.md
+              echo "" >> release_notes.md
+              if [ -n "$PREVIOUS_TAG" ]; then
+                echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${TAG_NAME}" >> release_notes.md
+              else
+                echo "**Full Changelog**: https://github.com/${{ github.repository }}/commits/${TAG_NAME}" >> release_notes.md
+              fi
+            fi
+          else
+            # No CHANGELOG.md, use commit-based notes
+            echo "## Changes" > release_notes.md
+            echo "" >> release_notes.md
+            [ -n "$BREAKING" ] && echo -e "### ⚠️ Breaking Changes\n$BREAKING" >> release_notes.md
+            [ -n "$FEATURES" ] && echo -e "### ✨ Features\n$FEATURES" >> release_notes.md
+            [ -n "$FIXES" ] && echo -e "### 🐛 Bug Fixes\n$FIXES" >> release_notes.md
+            [ -n "$OTHER" ] && echo -e "### 📝 Other Changes\n$OTHER" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "---" >> release_notes.md
+            echo "" >> release_notes.md
+            if [ -n "$PREVIOUS_TAG" ]; then
+              echo "**Full Changelog**: https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${TAG_NAME}" >> release_notes.md
+            else
+              echo "**Full Changelog**: https://github.com/${{ github.repository }}/commits/${TAG_NAME}" >> release_notes.md
+            fi
+          fi
+
+      - name: Create GitHub release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ steps.version.outputs.tag_name }}"
+          
+          # Check if release already exists
+          if gh release view "${TAG_NAME}" &>/dev/null; then
+            echo "Release ${TAG_NAME} already exists, skipping"
+            exit 0
+          fi
+          
+          # Create release with "Release v1.2.3" format
+          gh release create "${TAG_NAME}" \
+            --title "Release ${TAG_NAME}" \
+            --notes-file release_notes.md
