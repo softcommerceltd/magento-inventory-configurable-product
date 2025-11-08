@@ -22,33 +22,15 @@ use Magento\ConfigurableProduct\Model\Inventory\ChangeParentStockStatus;
 class UpdateParentStockStatusInLegacyStockPlugin
 {
     /**
-     * @var DefaultSourceProviderInterface
-     */
-    private DefaultSourceProviderInterface $defaultSourceProvider;
-
-    /**
-     * @var ChangeParentStockStatus
-     */
-    private ChangeParentStockStatus $changeParentStockStatus;
-
-    /**
-     * @var GetProductIdsBySkusInterface
-     */
-    private GetProductIdsBySkusInterface $getProductIdsBySkus;
-
-    /**
      * @param DefaultSourceProviderInterface $defaultSourceProvider
      * @param GetProductIdsBySkusInterface $getProductIdsBySkus
      * @param ChangeParentStockStatus $changeParentStockStatus
      */
     public function __construct(
-        DefaultSourceProviderInterface $defaultSourceProvider,
-        GetProductIdsBySkusInterface $getProductIdsBySkus,
-        ChangeParentStockStatus $changeParentStockStatus
+        private readonly DefaultSourceProviderInterface $defaultSourceProvider,
+        private readonly GetProductIdsBySkusInterface $getProductIdsBySkus,
+        private readonly ChangeParentStockStatus $changeParentStockStatus
     ) {
-        $this->defaultSourceProvider = $defaultSourceProvider;
-        $this->getProductIdsBySkus = $getProductIdsBySkus;
-        $this->changeParentStockStatus = $changeParentStockStatus;
     }
 
     /**
